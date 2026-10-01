@@ -1,0 +1,248 @@
+// Схема бази даних сервісу продажу авіаквитків.
+// Усі грошові суми зберігаються в копійках (Int), валюта — UAH.
+// SQLite не підтримує enum, тому статуси та ролі — рядки; допустимі значення
+// описані в src/lib/constants.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  phone        String?
+  role         String   @default("CUSTOMER") // CUSTOMER | SUPPORT | MANAGER | ADMIN
+  isBlocked    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orders Order[]
+
+  @@index([role])
+}
+
+model Airline {
+  id                String   @id @default(cuid())
+  code              String   @unique
+  name              String
+  country           String?
+  commissionPercent Float    @default(0) // комісія, яку агенція отримує від авіакомпанії
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  flights Flight[]
+}
+
+model Airport {
+  id        String  @id @default(cuid())
+  code      String  @unique // IATA
+  name      String
+  city      String
+  country   String
+  timezone  String // IANA, напр. Europe/Kyiv
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean @default(true)
+
+  departures Flight[] @relation("FlightOrigin")
+  arrivals   Flight[] @relation("FlightDestination")
+}
+
+model Flight {
+  id              String   @id @default(cuid())
+  flightNumber    String
+  airlineId       String
+  originId        String
+  destinationId   String
+  departureAt     DateTime // UTC
+  arrivalAt       DateTime // UTC
+  durationMinutes Int
+  stops           Int      @default(0)
+  stopCity        String?
+  aircraft        String?
+  basePrice       Int // базова ціна дорослого в економ-класі, копійки
+  seatsEconomy    Int
+  seatsBusiness   Int
+  status          String   @default("SCHEDULED") // SCHEDULED | CANCELLED
+  createdAt       DateTime @default(now())
+
+  airline     Airline   @relation(fields: [airlineId], references: [id])
+  origin      Airport   @relation("FlightOrigin", fields: [originId], references: [id])
+  destination Airport   @relation("FlightDestination", fields: [destinationId], references: [id])
+  bookings    Booking[]
+
+  @@index([originId, destinationId, departureAt])
+  @@index([departureAt])
+}
+
+model Tariff {
+  id               String  @id @default(cuid())
+  code             String  @unique
+  name             String
+  cabinClass       String // ECONOMY | BUSINESS
+  priceMultiplier  Float // множник до базової ціни рейсу
+  carryOnKg        Int     @default(8)
+  checkedBaggageKg Int     @default(0)
+  isRefundable     Boolean @default(false)
+  refundFeePercent Int     @default(0) // утримання при поверненні, % від вартості перельоту
+  isChangeable     Boolean @default(false)
+  seatSelection    Boolean @default(false)
+  description      String?
+  sortOrder        Int     @default(0)
+  isActive         Boolean @default(true)
+
+  bookings Booking[]
+}
+
+model ExtraService {
+  id           String  @id @default(cuid())
+  code         String  @unique
+  name         String
+  description  String?
+  price        Int // копійки
+  perPassenger Boolean @default(true)
+  sortOrder    Int     @default(0)
+  isActive     Boolean @default(true)
+
+  orderExtras OrderExtra[]
+}
+
+model PromoCode {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  description    String?
+  discountType   String // PERCENT | FIXED
+  discountValue  Int // відсотки або копійки
+  minOrderAmount Int       @default(0)
+  maxUses        Int?
+  usedCount      Int       @default(0)
+  validFrom      DateTime?
+  validTo        DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+
+  orders Order[]
+}
+
+// Замовлення — комерційна частина покупки (суми, оплата, контакти).
+model Order {
+  id           String    @id @default(cuid())
+  number       String    @unique
+  userId       String
+  status       String    @default("PENDING_PAYMENT") // PENDING_PAYMENT | PAID | CANCELLED | REFUNDED
+  contactEmail String
+  contactPhone String
+  fareTotal    Int
+  extrasTotal  Int       @default(0)
+  serviceFee   Int       @default(0)
+  discount     Int       @default(0)
+  total        Int
+  currency     String    @default("UAH")
+  promoCodeId  String?
+  createdAt    DateTime  @default(now())
+  paidAt       DateTime?
+  cancelledAt  DateTime?
+
+  user      User         @relation(fields: [userId], references: [id])
+  promoCode PromoCode?   @relation(fields: [promoCodeId], references: [id])
+  bookings  Booking[]
+  extras    OrderExtra[]
+  payments  Payment[]
+
+  @@index([userId])
+  @@index([status, createdAt])
+}
+
+// Бронювання — місця на конкретному рейсі в межах замовлення.
+// Умови тарифу копіюються сюди, щоб подальші зміни тарифу не впливали на продані квитки.
+model Booking {
+  id               String    @id @default(cuid())
+  pnr              String    @unique
+  orderId          String
+  flightId         String
+  tariffId         String
+  tariffName       String
+  cabinClass       String
+  status           String    @default("PENDING") // PENDING | CONFIRMED | CANCELLED
+  fareTotal        Int
+  carryOnKg        Int       @default(0)
+  checkedBaggageKg Int       @default(0)
+  isRefundable     Boolean   @default(false)
+  refundFeePercent Int       @default(0)
+  isChangeable     Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  cancelledAt      DateTime?
+
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  flight     Flight      @relation(fields: [flightId], references: [id])
+  tariff     Tariff      @relation(fields: [tariffId], references: [id])
+  passengers Passenger[]
+
+  @@index([orderId])
+  @@index([flightId])
+}
+
+model Passenger {
+  id             String    @id @default(cuid())
+  bookingId      String
+  type           String // ADULT | CHILD | INFANT
+  firstName      String
+  lastName       String
+  gender         String // M | F
+  birthDate      DateTime
+  citizenship    String
+  documentNumber String
+  documentExpiry DateTime?
+  ticketNumber   String?
+  price          Int
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model OrderExtra {
+  id        String  @id @default(cuid())
+  orderId   String
+  serviceId String?
+  name      String
+  quantity  Int
+  unitPrice Int
+  total     Int
+
+  order   Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  service ExtraService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model Payment {
+  id             String    @id @default(cuid())
+  orderId        String
+  provider       String
+  providerRef    String?
+  amount         Int
+  refundedAmount Int       @default(0)
+  currency       String    @default("UAH")
+  status         String    @default("PENDING") // PENDING | SUCCEEDED | FAILED | REFUNDED
+  createdAt      DateTime  @default(now())
+  paidAt         DateTime?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status, createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
