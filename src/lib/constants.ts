@@ -70,6 +70,9 @@ export const STATUS_TONES: Record<string, BadgeTone> = {
   REFUNDED: "gray",
 };
 
+// Країна, міста якої показуються на головній у списку «Вилітаємо з».
+export const HOME_COUNTRY = "Україна";
+
 export const MAX_PASSENGERS = 9;
 // Неоплачене замовлення скасовується через цей час.
 export const PAYMENT_WINDOW_MINUTES = 30;

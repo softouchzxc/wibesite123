@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, CreditCard, Headset, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, CreditCard, Headset, MapPin, ShieldCheck } from "lucide-react";
+import { HeroBackground } from "@/components/site/HeroScene";
 import { SearchForm } from "@/components/site/SearchForm";
-import { SALES_CLOSE_HOURS } from "@/lib/constants";
+import { HOME_COUNTRY, SALES_CLOSE_HOURS } from "@/lib/constants";
 import { daysFromNow, formatDateShort, localDateKey, todayKey } from "@/lib/datetime";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/format";
@@ -62,37 +63,90 @@ async function getPopularDestinations() {
     }));
 }
 
-export default async function HomePage() {
-  const [airports, popular] = await Promise.all([
+/** Міста, з яких зараз є рейси в продажу. */
+async function getDepartureCities() {
+  return db.airport.findMany({
+    where: {
+      isActive: true,
+      country: HOME_COUNTRY,
+      departures: { some: { status: "SCHEDULED", departureAt: { gte: new Date() } } },
+    },
+    select: { code: true, city: true },
+    orderBy: { code: "asc" },
+  });
+}
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [airports, popular, departureCities, params] = await Promise.all([
     db.airport.findMany({
       where: { isActive: true },
       select: { code: true, name: true, city: true, country: true },
       orderBy: [{ country: "asc" }, { city: "asc" }],
     }),
     getPopularDestinations(),
+    getDepartureCities(),
+    searchParams,
   ]);
   const today = todayKey();
   const defaultDate = localDateKey(daysFromNow(7), "Europe/Kyiv");
+  // Місто вильоту можна обрати зі списку в шапці: /?from=LWO.
+  const origin = airports.find((a) => a.code === params.from)?.code ?? "KBP";
 
   return (
     <>
-      <section className="relative bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 pb-24 pt-12 text-white sm:pt-20">
-        <div className="container-page">
-          <h1 className="max-w-2xl text-3xl font-extrabold leading-tight sm:text-5xl">
-            Авіаквитки онлайн — швидко та без зайвих кроків
-          </h1>
-          <p className="mt-4 max-w-xl text-base text-brand-100 sm:text-lg">
-            Порівнюйте рейси й тарифи, бронюйте за кілька хвилин і керуйте поїздками в особистому кабінеті.
-          </p>
+      <section className="relative overflow-hidden bg-brand-900 pb-72 pt-10 text-white sm:pt-16 lg:min-h-[30rem] lg:pb-24">
+        <HeroBackground />
+        <div className="container-page relative">
+          <div className="lg:max-w-xl">
+            <h1 className="text-3xl font-extrabold leading-tight sm:text-5xl">
+              Авіаквитки онлайн — швидко та без зайвих кроків
+            </h1>
+            <p className="mt-4 max-w-xl text-base text-brand-100 sm:text-lg">
+              Порівнюйте рейси й тарифи, бронюйте за кілька хвилин і керуйте поїздками в особистому кабінеті.
+            </p>
+
+            {departureCities.length > 0 && (
+              <div className="mt-6">
+                <p className="text-sm font-semibold text-brand-100">Вилітаємо з міст</p>
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {departureCities.map((city) => {
+                    const active = city.code === origin;
+                    return (
+                      <li key={city.code}>
+                        <Link
+                          href={`/?from=${city.code}`}
+                          scroll={false}
+                          aria-current={active ? "true" : undefined}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+                            active
+                              ? "bg-white text-brand-800 shadow"
+                              : "bg-white/15 text-white ring-1 ring-inset ring-white/30 hover:bg-white/25"
+                          }`}
+                        >
+                          <MapPin className="size-3.5" aria-hidden />
+                          {city.city}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
       <section className="container-page relative z-10 -mt-16">
         <SearchForm
+          key={origin}
           airports={airports}
           minDate={today}
           initial={{
-            origin: "KBP",
+            origin,
             destination: "",
             date: defaultDate,
             adults: 1,

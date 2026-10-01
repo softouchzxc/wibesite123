@@ -81,6 +81,50 @@ body {
   }
 }
 
+/* ── Анімація головної (components/site/HeroScene.tsx) ───────────────────── */
+
+/* Фото повільно наближається й зсувається — складається враження польоту. */
+.hero-photo {
+  animation: hero-photo-drift 26s ease-in-out infinite alternate;
+  will-change: transform;
+}
+.hero-haze {
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.9), transparent);
+  filter: blur(24px);
+  animation: hero-haze-drift linear infinite;
+}
+
+@keyframes hero-photo-drift {
+  from {
+    transform: scale(1.03) translate(1.2%, 0.6%);
+  }
+  to {
+    transform: scale(1.14) translate(-1.6%, -1%);
+  }
+}
+@keyframes hero-haze-drift {
+  from {
+    transform: translateX(-70vw);
+  }
+  to {
+    transform: translateX(110vw);
+  }
+}
+
+/* Якщо в системі вимкнено анімації — показуємо нерухому картинку. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-photo,
+  .hero-haze {
+    animation: none;
+  }
+  .hero-photo {
+    transform: scale(1.03);
+  }
+  .hero-haze {
+    transform: translateX(calc(var(--i, 0) * 30vw));
+  }
+}
+
 @media print {
   .no-print {
     display: none !important;
