@@ -1,31 +1,35 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import { Onest, Unbounded } from "next/font/google";
+import { Footer } from "@/components/Footer";
+import { Header } from "@/components/Header";
+import { SITE } from "@/data/site";
 import "./globals.css";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin", "cyrillic"],
-  display: "swap",
-});
+const onest = Onest({ variable: "--font-onest", subsets: ["latin", "cyrillic"], display: "swap" });
+const unbounded = Unbounded({ variable: "--font-unbounded", subsets: ["latin", "cyrillic"], display: "swap" });
 
 export const metadata: Metadata = {
   title: {
-    default: "Крила — авіаквитки онлайн",
-    template: "%s — Крила",
+    default: `${SITE.name} — шаурма у 9 містах України`,
+    template: `%s — ${SITE.name}`,
   },
-  description: "Пошук і бронювання авіаквитків онлайн: зручний пошук, прозорі тарифи, особистий кабінет.",
+  description: SITE.description,
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1d34d9",
+  themeColor: "#1c1410",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="uk" className={`${manrope.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col font-sans">{children}</body>
+    <html lang="uk" data-scroll-behavior="smooth" className={`${onest.variable} ${unbounded.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col font-sans">
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </body>
     </html>
   );
 }

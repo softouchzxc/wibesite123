@@ -1,28 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-onest), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-unbounded), var(--font-onest), sans-serif;
 
-  --color-brand-50: #eef4ff;
-  --color-brand-100: #dbe7ff;
-  --color-brand-200: #bfd3ff;
-  --color-brand-300: #93b4ff;
-  --color-brand-400: #608aff;
-  --color-brand-500: #3b63f7;
-  --color-brand-600: #2545ec;
-  --color-brand-700: #1d34d9;
-  --color-brand-800: #1e2db0;
-  --color-brand-900: #1e2c8a;
-  --color-brand-950: #151b4f;
+  --color-ink: #1c1410;
+  --color-ink-soft: #2b2019;
+  --color-cream: #fff7ea;
+  --color-sand: #f3e4cc;
+
+  --color-fire-300: #ffb27a;
+  --color-fire-400: #ff8a3d;
+  --color-fire-500: #f2630c;
+  --color-fire-600: #d84f05;
+
+  --color-hop-400: #9bcf4a;
+  --color-hop-500: #6fa82b;
+  --color-hop-700: #3f6b12;
 }
 
 html {
   scroll-behavior: smooth;
+  /* Липка шапка заввишки 4rem не повинна закривати початок сторінки чи якір. */
+  scroll-padding-top: 5rem;
 }
 
 body {
-  background: var(--color-slate-50);
-  color: var(--color-slate-900);
+  background: var(--color-cream);
+  color: var(--color-ink);
 }
 
 @layer components {
@@ -31,105 +36,54 @@ body {
   }
 
   .btn {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
-      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500
-      disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition
+      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fire-500;
   }
-  .btn-primary {
-    @apply bg-brand-600 text-white shadow-sm hover:bg-brand-700;
+  .btn-fire {
+    @apply bg-fire-500 text-ink shadow-lg shadow-fire-500/25 hover:bg-fire-400;
   }
-  .btn-accent {
-    @apply bg-amber-400 text-slate-900 shadow-sm hover:bg-amber-300;
+  .btn-light {
+    @apply border border-white/30 bg-white/10 text-white hover:bg-white/20;
   }
-  .btn-secondary {
-    @apply border border-slate-300 bg-white text-slate-800 hover:bg-slate-50;
-  }
-  .btn-ghost {
-    @apply text-slate-700 hover:bg-slate-100;
-  }
-  .btn-danger {
-    @apply border border-red-200 bg-white text-red-700 hover:bg-red-50;
-  }
-  .btn-sm {
-    @apply rounded-lg px-3 py-1.5 text-xs;
+  .btn-dark {
+    @apply bg-ink text-cream hover:bg-ink-soft;
   }
 
-  .card {
-    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+  .eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.2em] text-fire-600;
   }
-
-  .label {
-    @apply mb-1.5 block text-sm font-medium text-slate-700;
-  }
-  .input {
-    @apply block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition
-      placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20
-      disabled:bg-slate-100 disabled:text-slate-500;
-  }
-
-  .table-admin {
-    @apply w-full text-left text-sm;
-  }
-  .table-admin th {
-    @apply whitespace-nowrap border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500;
-  }
-  .table-admin td {
-    @apply border-b border-slate-100 px-4 py-3 align-middle;
-  }
-  .table-admin tbody tr:hover {
-    @apply bg-slate-50/70;
+  .section-title {
+    @apply font-display text-2xl font-extrabold leading-tight sm:text-4xl;
   }
 }
 
-/* ── Анімація головної (components/site/HeroScene.tsx) ───────────────────── */
+/* ── Анімації ────────────────────────────────────────────────────────────── */
 
-/* Фото повільно наближається й зсувається — складається враження польоту. */
-.hero-photo {
-  animation: hero-photo-drift 26s ease-in-out infinite alternate;
-  will-change: transform;
+.marquee-track {
+  animation: marquee 28s linear infinite;
 }
-.hero-haze {
-  background: radial-gradient(closest-side, rgb(255 255 255 / 0.9), transparent);
-  filter: blur(24px);
-  animation: hero-haze-drift linear infinite;
+/* Фото на головній повільно наближається. */
+.hero-zoom {
+  animation: hero-zoom 22s ease-in-out infinite alternate;
 }
 
-@keyframes hero-photo-drift {
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes hero-zoom {
   from {
-    transform: scale(1.03) translate(1.2%, 0.6%);
+    transform: scale(1);
   }
   to {
-    transform: scale(1.14) translate(-1.6%, -1%);
-  }
-}
-@keyframes hero-haze-drift {
-  from {
-    transform: translateX(-70vw);
-  }
-  to {
-    transform: translateX(110vw);
+    transform: scale(1.1);
   }
 }
 
-/* Якщо в системі вимкнено анімації — показуємо нерухому картинку. */
 @media (prefers-reduced-motion: reduce) {
-  .hero-photo,
-  .hero-haze {
+  .marquee-track,
+  .hero-zoom {
     animation: none;
-  }
-  .hero-photo {
-    transform: scale(1.03);
-  }
-  .hero-haze {
-    transform: translateX(calc(var(--i, 0) * 30vw));
-  }
-}
-
-@media print {
-  .no-print {
-    display: none !important;
-  }
-  body {
-    background: white;
   }
 }
