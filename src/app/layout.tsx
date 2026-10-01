@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Onest, Unbounded } from "next/font/google";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { CITIES } from "@/data/locations";
 import { SITE } from "@/data/site";
 import "./globals.css";
 
@@ -10,7 +11,7 @@ const unbounded = Unbounded({ variable: "--font-unbounded", subsets: ["latin", "
 
 export const metadata: Metadata = {
   title: {
-    default: `${SITE.name} — шаурма у 9 містах України`,
+    default: `${SITE.name} — шаурма у ${CITIES.length} містах України`,
     template: `%s — ${SITE.name}`,
   },
   description: SITE.description,
